@@ -20,10 +20,10 @@ export function AdminLayout() {
 
   const navItems = [
     { path: PATHS.admin.dashboard, icon: LayoutDashboard, label: 'Dashboard' },
-    { path: PATHS.admin.settings, icon: Settings, label: 'Configurações' },
     { path: PATHS.admin.structure, icon: Building, label: 'Estrutura' },
     { path: PATHS.admin.users, icon: Users, label: 'Usuários' },
     { path: PATHS.admin.policies, icon: FileText, label: 'Políticas' },
+    { path: PATHS.admin.settings, icon: Settings, label: 'Configurações' },
   ];
 
   return (

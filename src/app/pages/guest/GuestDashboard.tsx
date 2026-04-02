@@ -5,11 +5,15 @@ import { Button, Card, CardContent, Avatar, AvatarFallback } from '../../compone
 import { 
   Bell, Wifi, Coffee, SprayCan, Wrench, 
   ArrowRight, Clock, MapPin, Menu, FileText, Calendar, AlertCircle, FileCheck, Check,
-  CreditCard, QrCode, MessageSquareWarning, Star, Download
+  CreditCard, QrCode, MessageSquareWarning, Star, Download, Minus, Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { GuestBottomNav } from '../../components/guest/GuestBottomNav';
 import { PATHS } from '../../routes';
+import { GUEST_ROOM_CONSUMPTION_CATALOG } from '../../data/guestRoomConsumptionCatalog';
+
+const formatBRL = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 export function GuestDashboard() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +22,8 @@ export function GuestDashboard() {
   
   const [activeTab, setActiveTab] = useState('home');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card' | null>(null);
+  /** Quantidade por item do catálogo "No quarto" (padrão 1). */
+  const [roomItemQty, setRoomItemQty] = useState<Record<string, number>>({});
 
   // Load Data
   const reservation = reservations.find(r => r.id === id);
@@ -314,6 +320,150 @@ export function GuestDashboard() {
     </div>
   );
 
+  const canRegisterRoomConsumption = ['CHECKED_IN', 'CHECKOUT_PENDING'].includes(
+    reservation.status,
+  );
+
+  const getRoomItemQty = (itemId: string) => roomItemQty[itemId] ?? 1;
+
+  const bumpRoomItemQty = (itemId: string, delta: number) => {
+    setRoomItemQty((prev) => {
+      const cur = prev[itemId] ?? 1;
+      const next = Math.min(99, Math.max(1, cur + delta));
+      return { ...prev, [itemId]: next };
+    });
+  };
+
+  const renderConsumption = () => (
+    <div className="animate-in fade-in slide-in-from-right-8 space-y-6 p-6 pb-28 duration-300">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Consumo no quarto</h2>
+        <p className="mt-1 text-sm leading-relaxed text-slate-500">
+          Informe o que você consumiu (frigobar, amenities, etc.). Os valores serão
+          lançados no seu extrato para conferência na recepção.
+        </p>
+      </div>
+
+      {!canRegisterRoomConsumption ? (
+        <Card className="border-amber-100 bg-amber-50/80">
+          <CardContent className="p-6 text-center">
+            <p className="text-sm font-medium text-amber-900">
+              Disponível após o check-in no hotel.
+            </p>
+            <p className="mt-2 text-xs text-amber-800/90">
+              Conclua seu pré-check-in ou aguarde a confirmação da recepção.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4 border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
+              onClick={() => setActiveTab('home')}
+            >
+              Voltar ao início
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {GUEST_ROOM_CONSUMPTION_CATALOG.map((item) => {
+              const qty = getRoomItemQty(item.id);
+              const lineTotal = item.price * qty;
+              const unitSuffix = item.unit ? ` (${item.unit})` : '';
+              const description =
+                qty === 1
+                  ? `Quarto — ${item.label}${unitSuffix}`
+                  : `Quarto — ${qty}× ${item.label}${unitSuffix}`;
+
+              return (
+                <div
+                  key={item.id}
+                  className="flex gap-3 rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
+                >
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="font-semibold text-slate-800">{item.label}</p>
+                    {item.unit && (
+                      <p className="mt-0.5 text-xs text-slate-400">{item.unit}</p>
+                    )}
+                    <p className="mt-2 text-sm text-slate-500">
+                      {formatBRL(item.price)}
+                      {item.unit ? <span className="text-slate-400"> / {item.unit}</span> : null}
+                    </p>
+                    {qty > 1 && (
+                      <p className="mt-1 text-sm font-semibold tabular-nums text-sky-700">
+                        Subtotal {formatBRL(lineTotal)}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 flex-col items-stretch justify-between gap-2">
+                    <div
+                      className="flex h-10 items-stretch overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+                      role="group"
+                      aria-label={`Quantidade de ${item.label}`}
+                    >
+                      <button
+                        type="button"
+                        className="flex w-9 items-center justify-center text-slate-600 transition-colors hover:bg-slate-200/80 disabled:opacity-40"
+                        aria-label="Diminuir quantidade"
+                        disabled={qty <= 1}
+                        onClick={() => bumpRoomItemQty(item.id, -1)}
+                      >
+                        <Minus size={16} strokeWidth={2.5} />
+                      </button>
+                      <span className="flex min-w-[2rem] items-center justify-center border-x border-slate-200 bg-white text-sm font-bold tabular-nums text-slate-900">
+                        {qty}
+                      </span>
+                      <button
+                        type="button"
+                        className="flex w-9 items-center justify-center text-slate-600 transition-colors hover:bg-slate-200/80 disabled:opacity-40"
+                        aria-label="Aumentar quantidade"
+                        disabled={qty >= 99}
+                        onClick={() => bumpRoomItemQty(item.id, 1)}
+                      >
+                        <Plus size={16} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-9 shrink-0 px-3 text-xs font-semibold"
+                      onClick={() => {
+                        addExpense(
+                          reservation.id,
+                          description,
+                          lineTotal,
+                          item.category,
+                        );
+                        toast.success('Item lançado na sua conta.', {
+                          description:
+                            qty === 1
+                              ? `${item.label} · ${formatBRL(lineTotal)}`
+                              : `${qty}× ${item.label} · ${formatBRL(lineTotal)}`,
+                        });
+                        setRoomItemQty((prev) => ({ ...prev, [item.id]: 1 }));
+                      }}
+                    >
+                      Adicionar
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('statement')}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+          >
+            Ver extrato completo
+            <ArrowRight size={16} />
+          </button>
+        </>
+      )}
+    </div>
+  );
+
   const renderStatement = () => (
     <div className="p-6 space-y-6 pb-24 animate-in slide-in-from-right-8 duration-300">
       <h2 className="text-2xl font-bold text-slate-900">Extrato</h2>
@@ -412,7 +562,11 @@ export function GuestDashboard() {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       {renderHeader()}
       
-      {activeTab === 'home' ? renderHome() : renderStatement()}
+      {activeTab === 'home'
+        ? renderHome()
+        : activeTab === 'consumption'
+          ? renderConsumption()
+          : renderStatement()}
 
       <GuestBottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>

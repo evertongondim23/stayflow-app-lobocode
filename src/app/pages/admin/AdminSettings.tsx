@@ -8,6 +8,9 @@ import Cropper from 'react-easy-crop';
 import getCroppedImg from '../../utils/canvasUtils';
 import { toast } from 'sonner';
 
+/** Defina como true para voltar a exibir Integrações (PMS/Channel) em Configurações. */
+const SHOW_PMS_CHANNEL_INTEGRATIONS = false;
+
 export function AdminSettings() {
   const [themeColor, setThemeColor] = useState('#0284c7'); // Default sky-600
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -296,7 +299,7 @@ export function AdminSettings() {
           </Card>
         </section>
 
-        {/* Integrations Section */}
+        {SHOW_PMS_CHANNEL_INTEGRATIONS && (
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2">
@@ -589,6 +592,7 @@ export function AdminSettings() {
             </CardContent>
           </Card>
         </section>
+        )}
 
       </div>
 

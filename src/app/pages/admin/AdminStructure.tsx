@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useHotel } from '../../context/HotelContext';
 import { Button, Card, CardContent, Input, Badge } from '../../components/ui';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogTrigger, DialogClose } from '../../components/ui/dialog';
 import { Plus, Trash2, Edit2, BedDouble, Check, Hotel, ArrowUpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+/** Defina como true para exibir novo quarto, gerenciar tipos e ações editar/excluir na tabela. */
+const SHOW_STRUCTURE_CRUD = false;
+
 export function AdminStructure() {
   const { rooms } = useHotel();
-  const [isEditing, setIsEditing] = useState<string | null>(null);
 
   // Mock types for demo
   const roomTypes = [
@@ -23,9 +25,10 @@ export function AdminStructure() {
           <h1 className="text-2xl font-bold text-slate-800">Estrutura e Quartos</h1>
           <p className="text-slate-500">Gerencie a capacidade física e tipos de acomodação.</p>
         </div>
+        {SHOW_STRUCTURE_CRUD && (
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2">Gerenciar Tipos</Button>
-          
+
           <Dialog>
             <DialogTrigger asChild>
               <Button className="bg-sky-600 hover:bg-sky-700 gap-2 shadow-sm transition-all hover:shadow-md">
@@ -105,6 +108,7 @@ export function AdminStructure() {
             </DialogContent>
           </Dialog>
         </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -138,7 +142,9 @@ export function AdminStructure() {
                     <th className="px-6 py-4">Andar</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4">Características</th>
+                    {SHOW_STRUCTURE_CRUD && (
                     <th className="px-6 py-4 text-right">Ações</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -171,14 +177,18 @@ export function AdminStructure() {
                           <span title="Frigobar" className="p-1 bg-slate-100 rounded"><Check size={12}/></span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right flex justify-end gap-2">
-                        <button className="p-2 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors">
+                      {SHOW_STRUCTURE_CRUD && (
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                        <button type="button" className="p-2 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors">
                           <Edit2 size={16}/>
                         </button>
-                        <button className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors">
+                        <button type="button" className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors">
                           <Trash2 size={16}/>
                         </button>
+                        </div>
                       </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
