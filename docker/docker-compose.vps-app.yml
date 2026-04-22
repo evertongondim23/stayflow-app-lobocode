@@ -1,0 +1,37 @@
+# Frontend + Traefik — variáveis no .env da raiz (ver .env.example).
+name: ${COMPOSE_VPS_STACK_NAME}
+
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    container_name: ${FRONTEND_CONTAINER_NAME}
+    restart: unless-stopped
+    expose:
+      - "${FRONTEND_CONTAINER_PORT}"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK}
+      - traefik.http.routers.${VPS_APP_PROJECT_NAME}-web.rule=Host(`${APP_HOST}`)
+      - traefik.http.routers.${VPS_APP_PROJECT_NAME}-web.entrypoints=web,websecure
+      - traefik.http.routers.${VPS_APP_PROJECT_NAME}-web.tls=true
+      - traefik.http.routers.${VPS_APP_PROJECT_NAME}-web.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.services.${VPS_APP_PROJECT_NAME}-web.loadbalancer.server.port=${FRONTEND_CONTAINER_PORT}
+
+networks:
+  edge:
+    name: ${TRAEFIK_NETWORK}
+    external: true
