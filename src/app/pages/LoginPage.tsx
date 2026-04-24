@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useHotel } from "../context/HotelContext";
+import { authService } from "../api/services";
 import { Button, Card, CardContent, Input } from "../components/ui";
 import {
   LogIn,
@@ -23,18 +24,17 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { reservations } = useHotel();
   const quickRef = useRef<HTMLElement>(null);
+  const submitLockRef = useRef(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const invitedRes = reservations.find((r) => r.status === "INVITED");
 
-  const scrollToQuickAccess = () => {
-    quickRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitLockRef.current || isSubmitting) return;
     const em = email.trim();
     if (!em) {
       toast.error("Informe o e-mail.");
@@ -48,11 +48,29 @@ export function LoginPage() {
       toast.error("Informe a senha.");
       return;
     }
-    toast.success(
-      "Credenciais aceitas no modo demo. Não há servidor de autenticação — use um dos acessos abaixo para continuar.",
-      { duration: 4500 }
-    );
-    scrollToQuickAccess();
+
+    submitLockRef.current = true;
+    setIsSubmitting(true);
+    try {
+      const result = await authService.login(em, password, true);
+
+      if (!result.success) {
+        toast.error(result.error ?? "Não foi possível entrar. Tente novamente.");
+        return;
+      }
+
+      const userRole = authService.getAuthState().user?.role;
+      toast.success("Login realizado com sucesso.");
+      if (userRole === "ADMIN" || userRole === "SYSTEM_ADMIN") {
+        navigate(PATHS.admin.root);
+        return;
+      }
+      navigate(PATHS.reception);
+    } finally {
+      // Garante reset do botão mesmo quando a API retorna erro (ex.: 401).
+      submitLockRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -112,7 +130,7 @@ export function LoginPage() {
                       type="button"
                       className="text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline"
                       onClick={() =>
-                        toast.message("Recuperação de senha virá na versão com backend.", {
+                        toast.message("Recuperação de senha será disponibilizada em breve.", {
                           description: "Por enquanto, use os acessos de demonstração.",
                         })
                       }
@@ -139,9 +157,10 @@ export function LoginPage() {
 
                 <Button
                   type="submit"
+                  disabled={isSubmitting}
                   className="h-11 w-full rounded-xl bg-sky-600 text-base font-semibold shadow-md shadow-sky-600/25 hover:bg-sky-700"
                 >
-                  Entrar
+                  {isSubmitting ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
 
